@@ -66,7 +66,7 @@ def check_quiz(assignment, path):
     print_results(response.json())
     print()
 
-    quiz_max = response.json().get('value', DREDD_READING_QUIZ_MAX)
+    quiz_max = response.json().get('value', DREDD_QUIZ_MAX)
     return int(response.json().get('status', 1))
 
 def check_code(assignment, path):
