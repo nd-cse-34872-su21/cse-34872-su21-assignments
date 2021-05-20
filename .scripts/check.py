@@ -13,10 +13,9 @@ import yaml
 ASSIGNMENTS     = {}
 DREDD_QUIZ_URL  = 'https://dredd.h4x0r.space/quiz/cse-34872-su21/'
 DREDD_QUIZ_MAX  = 4.0
-if bool(os.environ.get('DEBUG', False)):
-    DREDD_CODE_URL = 'https://dredd.h4x0r.space/debug/cse-34872-su21/'
-else:
-    DREDD_CODE_URL = 'https://dredd.h4x0r.space/code/cse-34872-su21/'
+DREDD_CODE_SLUG = 'debug' if bool(os.environ.get('DEBUG', False)) else 'code'
+DREDD_CODE_URL  = f'https://dredd.h4x0r.space/{DREDD_CODE_SLUG}/cse-34872-su21/'
+DREDD_CODE_MAX  = 6.0
 
 # Utilities
 
@@ -27,9 +26,9 @@ def add_assignment(assignment, path=None):
     if assignment.startswith('reading') or assignment.startswith('challenge'):
         ASSIGNMENTS[assignment] = path
 
-def print_results(results):
+def print_results(results, print_status=True):
     for key, value in sorted(results.items()):
-        if not key.lower().startswith('q'):
+        if key in ('score', 'status', 'value'):
             continue
 
         try:
@@ -41,7 +40,8 @@ def print_results(results):
                 print('{:>8} {}'.format(key.title(), value))
 
     print('{:>8} {:.2f} / {:.2f}'.format('Score', results.get('score', 0), results.get('value', 0)))
-    print('{:>8} {}'.format('Status', 'Success' if int(results.get('status', 1)) == 0 else 'Failure'))
+    if print_status:
+        print('{:>8} {}'.format('Status', 'Success' if int(results.get('status', 1)) == 0 else 'Failure'))
 
 # Check Functions
 
@@ -80,7 +80,7 @@ def check_code(assignment, path):
     for source in sources:
         print('\nChecking {} {} ...'.format(assignment, os.path.basename(source)))
         response = requests.post(DREDD_CODE_URL + assignment, files={'source': open(source)})
-        print_results(response.json().items())
+        print_results(response.json(), False)
 
         result = min(result, 0 if response.json().get('score', 0) >= DREDD_CODE_MAX else 1)
     return result
