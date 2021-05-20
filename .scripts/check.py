@@ -66,7 +66,6 @@ def check_quiz(assignment, path):
     print_results(response.json())
     print()
 
-    quiz_max = response.json().get('value', DREDD_QUIZ_MAX)
     return int(response.json().get('status', 1))
 
 def check_code(assignment, path):
@@ -87,36 +86,40 @@ def check_code(assignment, path):
 
 # Main Execution
 
-# Add GitLab/GitHub branch
-for variable in ['CI_BUILD_REF_NAME', 'GITHUB_HEAD_REF']:
+def main():
+    # Add GitLab/GitHub branch
+    for variable in ['CI_BUILD_REF_NAME', 'GITHUB_HEAD_REF']:
+        try:
+            add_assignment(os.environ[variable])
+        except KeyError:
+            pass
+
+    # Add local git branch
     try:
-        add_assignment(os.environ[variable])
-    except KeyError:
+        add_assignment(os.popen('git symbolic-ref -q --short HEAD 2> /dev/null').read().strip())
+    except OSError:
         pass
 
-# Add local git branch
-try:
-    add_assignment(os.popen('git symbolic-ref -q --short HEAD 2> /dev/null').read().strip())
-except OSError:
-    pass
+    # Add current directory
+    add_assignment(os.path.basename(os.path.abspath(os.curdir)), os.curdir)
 
-# Add current directory
-add_assignment(os.path.basename(os.path.abspath(os.curdir)), os.curdir)
+    # For each assignment, submit quiz answers and program code
 
-# For each assignment, submit quiz answers and program code
+    if not ASSIGNMENTS:
+        print('Nothing to submit!')
+        sys.exit(1)
 
-if not ASSIGNMENTS:
-    print('Nothing to submit!')
-    sys.exit(1)
+    exit_code = 0
 
-exit_code = 0
+    for assignment, path in sorted(ASSIGNMENTS.items()):
+        if 'reading' in assignment:
+            exit_code += check_quiz(assignment, path)
+        elif 'challenge' in assignment:
+            exit_code += check_code(assignment, path)
 
-for assignment, path in sorted(ASSIGNMENTS.items()):
-    if 'reading' in assignment:
-        exit_code += check_quiz(assignment, path)
-    elif 'challenge' in assignment:
-        exit_code += check_code(assignment, path)
-
-sys.exit(exit_code)
+    sys.exit(exit_code)
 
 # vim: set sts=4 sw=4 ts=8 expandtab ft=python:
+
+if __name__ == '__main__':
+    main()
