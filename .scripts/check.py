@@ -43,9 +43,9 @@ def print_results(results):
     print('{:>8} {:.2f} / {:.2f}'.format('Score', results.get('score', 0), results.get('value', 0)))
     print('{:>8} {}'.format('Status', 'Success' if int(results.get('status', 1)) == 0 else 'Failure'))
 
-# Submit Functions
+# Check Functions
 
-def submit_quiz(assignment, path):
+def check_quiz(assignment, path):
     answers = None
 
     for mod_load, ext in ((json.load, 'json'), (yaml.safe_load, 'yaml')):
@@ -68,6 +68,22 @@ def submit_quiz(assignment, path):
 
     quiz_max = response.json().get('value', DREDD_READING_QUIZ_MAX)
     return int(response.json().get('status', 1))
+
+def check_code(assignment, path):
+    sources = glob.glob(os.path.join(path, 'program.*'))
+
+    if not sources:
+        print('No code found (program.*)')
+        return 1
+
+    result = 1
+    for source in sources:
+        print('\nChecking {} {} ...'.format(assignment, os.path.basename(source)))
+        response = requests.post(DREDD_CODE_URL + assignment, files={'source': open(source)})
+        print_results(response.json().items())
+
+        result = min(result, 0 if response.json().get('score', 0) >= DREDD_CODE_MAX else 1)
+    return result
 
 # Main Execution
 
@@ -97,9 +113,9 @@ exit_code = 0
 
 for assignment, path in sorted(ASSIGNMENTS.items()):
     if 'reading' in assignment:
-        exit_code += submit_quiz(assignment, path)
+        exit_code += check_quiz(assignment, path)
     elif 'challenge' in assignment:
-        exit_code += submit_code(assignment, path)
+        exit_code += check_code(assignment, path)
 
 sys.exit(exit_code)
 
